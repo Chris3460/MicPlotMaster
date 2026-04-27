@@ -111,14 +111,21 @@ Supports PyInstaller onedir and onefile builds
 Prebuilt executables are created using PyInstaller.
 
 💬 Support & Feedback
+
 Questions, bug reports, or suggestions are welcome:
+
 📧 Email: Chris3460@gmail.com
 
 ❤️ Optional Donations
+
 Mic Plot Master is provided free of charge.
+
 If the tool saves you time or helps your production run more smoothly, optional donations help support continued development:
+
 💸 Venmo:
+
 https://venmo.com/code?user_id=2968534653075456460&created=1776955829
+
 Donations are never required — thank you for supporting theater.
 
 📄 License
