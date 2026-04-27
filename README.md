@@ -23,6 +23,7 @@ That’s it — the app runs fully offline once downloaded.
 
 💻 Running from Source (All Operating Systems)
 If you are on macOS, Linux, or prefer running from source on Windows, you can launch Mic Plot Master using Python.
+
 ✅ Requirements
 
 Python 3.10 or newer
