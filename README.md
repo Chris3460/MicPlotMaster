@@ -27,6 +27,7 @@ If you are on macOS, Linux, or prefer running from source on Windows, you can la
 ✅ Requirements
 
 Python 3.10 or newer
+
 The following Python packages:
 
 PyQt6
@@ -36,9 +37,9 @@ openpyxl
 
 📦 Install Dependencies
 From the project root:
-Shellpip install -r requirements.txtShow more lines
+pip install -r requirements.txtShow more lines
 ▶ Run the Application
-Shellpython app.pyShow more lines
+python app.pyShow more lines
 The Mic Plot Master window should open normally.
 
 📁 Project Files & Resources
