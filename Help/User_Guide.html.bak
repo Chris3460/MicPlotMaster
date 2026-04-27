@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mic Plot Master 2.0 — User Guide</title>
+  <style>
+    :root {
+      --ink: #111;
+      --muted: #555;
+      --border: #d0d0d0;
+      --bg: #fff;
+      --accent: #1f6feb;
+      --warn: #b42318;
+      --good: #1a7f37;
+      --note: #f7f7f8;
+      --code: #0b1020;
+      --codebg: #f4f6fb;
+    }
+    html, body { background: var(--bg); color: var(--ink); margin: 0; padding: 0; }
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.45; }
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 54px;
+    }
+    h1 { font-size: 28px; margin: 0 0 8px; }
+    h2 { font-size: 20px; margin: 28px 0 8px; padding-top: 10px; border-top: 1px solid var(--border); }
+    h3 { font-size: 16px; margin: 18px 0 6px; }
+    p { margin: 10px 0; }
+    ul { margin: 10px 0 10px 22px; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .muted { color: var(--muted); }
+    .note {
+      border: 1px solid var(--border);
+      background: var(--note);
+      padding: 10px 12px;
+      border-radius: 8px;
+      margin: 12px 0;
+    }
+    .callout-good { border-left: 5px solid var(--good); }
+    .callout-warn { border-left: 5px solid var(--warn); }
+    .kbd {
+      display: inline-block;
+      padding: 1px 6px;
+      border: 1px solid var(--border);
+      border-bottom-width: 2px;
+      border-radius: 6px;
+      background: #fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+    .toc {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #fff;
+    }
+    .toc ul { margin: 8px 0 0 18px; }
+    .tag {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--border);
+      background: #fff;
+      margin-right: 6px;
+    }
+    .tag.warn { border-color: #fca5a5; background: #fff1f2; color: #9f1239; }
+    .tag.good { border-color: #86efac; background: #f0fdf4; color: #14532d; }
+    .tag.info { border-color: #93c5fd; background: #eff6ff; color: #1e3a8a; }
+	.tag.yellow {
+	  border-color: #fde68a;
+	  background: #fef9c3;
+	  color: #92400e;
+	}
+
+    .figure {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      margin: 14px 0;
+      background: #fff;
+    }
+    .figcap { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    /* Print */
+    @media print {
+      .page { padding: 0.75in; }
+      a { color: #000; text-decoration: none; }
+      .toc { break-inside: avoid; }
+      .figure { break-inside: avoid; }
+      h2 { break-before: page; }
+      h2:first-of-type { break-before: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>Mic Plot Master 2.0 — User Guide</h1>
+    <p class="muted">
+      A practical guide to building and managing wireless microphone assignments for theatre productions.
+      This guide is based on the features present in the Mic Plot Master 2.0 application (tabs, imports/exports, timeline overrides, grouping, and manual assignment tools).
+    </p>
+
+    <div class="toc">
+      <strong>Contents</strong>
+      <ul>
+        <li><a href="#quickstart">1. Quick Start Workflow</a></li>
+        <li><a href="#projects">2. Projects (.mpm2): New, Open, Save</a></li>
+        <li><a href="#csv">3. CSV Imports & Downloads (Scenes + Cast)</a></li>
+        <li><a href="#scenes">4. Scenes Tab</a></li>
+        <li><a href="#cast">5. Cast Tab</a></li>
+        <li><a href="#autoassign">6. Auto‑Assign Microphones</a></li>
+        <li><a href="#micassign">7. Mic Assignments & Mic Explanation</a></li>
+        <li><a href="#timeline">8. Timeline (Per‑Scene Overrides)</a></li>
+        <li><a href="#manual">9. Manual Assignment</a></li>
+        <li><a href="#final">10. Final Output Preview & Excel Export</a></li>
+        <li><a href="#grouping">11. Grouping (Final numbering only)</a></li>
+        <li><a href="#exports">12. Export Summary</a></li>
+        <li><a href="#help">13. Help & Support</a></li>
+        <li><a href="#trouble">14. Troubleshooting & Best Practices</a></li>
+      </ul>
+    </div>
+
+	<div class="figure">
+	  <img
+		src="MPM2_Layout.png"
+		alt="Mic Plot Master 2.0 main application window showing menu bar, toolbar, tabs, and content area"
+		style="width: 100%; height: auto; display: block;"
+	  />
+	  <div class="figcap">
+		Mic Plot Master 2.0 main application layout (actual screenshot).
+	  </div>
+	</div>
+
+    <h2 id="quickstart">1. Quick Start Workflow</h2>
+    <ol>
+      <li><strong>Create scenes and characters</strong>: Use the <span class="tag info">Scenes</span> tab to add scenes and mark which characters appear in each scene.</li>
+      <li><strong>Assign casting</strong>: Use the <span class="tag info">Cast</span> tab to map each character to an actor name.</li>
+      <li><strong>Set constraints</strong>: At the top of the window, set <em>Max sharers per mic</em> and <em>Available microphones</em>.</li>
+      <li><strong>Generate a plan</strong>: Click <strong>Auto‑Assign Microphones</strong>.</li>
+      <li><strong>Review results</strong>: Check <span class="tag info">Mic Assignments</span> and <span class="tag info">Mic Explanation</span> for risk warnings.</li>
+      <li><strong>Adjust per‑scene</strong> (optional): Use <span class="tag info">Timeline</span> to move an actor to a different mic for one scene or an entire block.</li>
+      <li><strong>Export outputs</strong>: Use the CSV and Excel export buttons/tabs to share with the booth/backstage team.</li>
+    </ol>
+
+    <h2 id="projects">2. Projects (.mpm2): New, Open, Save</h2>
+    <p>
+      Projects are stored as <strong>.mpm2</strong> files and include:
+      scenes, characters, casting (character → actor), mic assignments, per‑scene overrides, and grouping settings.
+    </p>
+    <ul>
+      <li><strong>File → New Project</strong>: starts a new empty project.</li>
+      <li><strong>File → Open Project…</strong>: loads an existing .mpm2.</li>
+      <li><strong>File → Save / Save As…</strong>: writes your project to disk.</li>
+    </ul>
+    <div class="note callout-good">
+      <strong>Tip:</strong> If you import scenes or cast via CSV, the app clears the existing mic plan so you don’t accidentally keep an outdated plan.
+    </div>
+
+    <h2 id="csv">3. CSV Imports & Downloads (Scenes + Cast)</h2>
+    <p>
+      Mic Plot Master supports importing and exporting (downloading) two CSVs:
+    </p>
+
+    <h3>3.1 Character_Scene_List.csv</h3>
+    <ul>
+      <li>Import via <strong>File → Import Character_Scene_List CSV…</strong></li>
+      <li>Download snapshot via <strong>Scenes tab → Download Character–Scene CSV…</strong></li>
+    </ul>
+
+    <div class="note">
+      <strong>Format:</strong>
+      <ul>
+        <li>Row 1: Scene names (first cell is a label such as “Character”)</li>
+        <li>Row 2: Page ranges (e.g., <code>12-15</code> or <code>12</code>)</li>
+        <li>Row 3+: First column = character name. Put an <strong>X</strong> in a scene column where the character appears.</li>
+      </ul>
+    </div>
+
+    <h3>3.2 Character_Actor_List.csv</h3>
+    <ul>
+      <li>Import via <strong>File → Import Character_Actor_List CSV…</strong></li>
+      <li>Download snapshot via <strong>Cast tab → Download Character–Actor CSV…</strong></li>
+    </ul>
+
+    <div class="note">
+      <strong>Format:</strong>
+      <ul>
+        <li>Two columns: <code>Character,Actor</code></li>
+        <li>Header row is allowed (and optional).</li>
+        <li>Actor column may be labeled Actor / Role / Cast / Name.</li>
+        <li>Blank actor cells are allowed while casting is incomplete.</li>
+      </ul>
+    </div>
+
+    <div class="note callout-warn">
+      <strong>Important:</strong> When you export/download a CSV and edit it offline, keep the same two-column structure (don’t add columns or rename columns unless you know what you’re doing).
+    </div>
+
+    <h2 id="scenes">4. Scenes Tab</h2>
+    <p>
+      Use <strong>Scenes</strong> to create/edit scenes, page ranges, and character participation.
+    </p>
+    <h3>4.1 Add and edit scenes</h3>
+    <ul>
+      <li><strong>Add Scene</strong>: creates a new scene (default name like “Scene 1”).</li>
+      <li>Select a scene in the left list to edit:
+        <ul>
+          <li><strong>Scene Name</strong></li>
+          <li><strong>Pages</strong> (Start–End)</li>
+          <li>Which characters appear in the scene (checkbox list)</li>
+        </ul>
+      </li>
+      <li><strong>Delete Scene</strong>: removes the selected scene.</li>
+    </ul>
+
+    <h3>4.2 Characters in scenes</h3>
+    <ul>
+      <li>Use “All Characters” to check/uncheck who appears in the scene.</li>
+      <li>“Characters in Scene” shows the selected list for that scene.</li>
+      <li><strong>Add new character…</strong> creates a new global character and adds them to the current scene.</li>
+    </ul>
+
+    <h3>4.3 Download Character–Scene CSV</h3>
+    <p>
+      Click <strong>Download Character–Scene CSV…</strong> to export a snapshot of current scene participation for offline completion.
+      This helps if you want to mark X’s on another computer without Mic Plot Master installed.
+    </p>
+
+    <h2 id="cast">5. Cast Tab</h2>
+    <p>
+      The <strong>Cast</strong> tab maps each character to an actor name. Actor names are editable and reused across characters.
+    </p>
+    <ul>
+      <li>Each row is a character.</li>
+      <li>The Actor cell is a dropdown that is also editable.</li>
+      <li>Typing a new name adds it to the actor list automatically.</li>
+      <li><strong>Download Character–Actor CSV…</strong> exports the current map for offline completion.</li>
+    </ul>
+
+    <div class="note callout-good">
+      <strong>Tip:</strong> Casting can be done after scenes. The app supports “scenes first, cast later.”
+    </div>
+
+    <h2 id="autoassign">6. Auto‑Assign Microphones</h2>
+    <p>
+      Auto‑Assign generates a mic plan using your constraints:
+      <strong>Max sharers per mic</strong> and <strong>Available microphones</strong>.
+    </p>
+    <ul>
+      <li>It prefers solo mics when possible.</li>
+      <li>It strongly avoids adjacent-scene handoffs (flagged as last resort).</li>
+      <li>If constraints are impossible (capacity too low), the app shows a dialog explaining required changes.</li>
+    </ul>
+
+    <div class="note callout-warn">
+      <span class="tag warn">▲</span>
+      <strong>Adjacent-swap risk:</strong> An adjacent-scene handoff means the mic changes between consecutive scene numbers (no buffer scene), which is often difficult backstage.
+    </div>
+
+    <h2 id="micassign">7. Mic Assignments & Mic Explanation</h2>
+    <h3>7.1 Mic Assignments tab</h3>
+    <p>
+      Shows each mic pack and the actor(s) assigned to it.
+      If a plan contains flagged adjacent-swap risk, those mics may be highlighted.
+    </p>
+
+    <h3>7.2 Mic Explanation tab</h3>
+    <p>
+      Provides:
+    </p>
+    <ul>
+      <li>A risk summary section</li>
+      <li>Mic-by-mic detail</li>
+      <li>Adjacency boundaries shown with scene labels (including pages when available)</li>
+    </ul>
+
+    <h2 id="timeline">8. Timeline (Per‑Scene Overrides)</h2>
+    <p>
+      The <strong>Timeline</strong> tab displays mic usage across scenes in a grid:
+      columns are scenes, rows are mic packs, and each cell shows the actor(s) using that mic in that scene.
+    </p>
+
+    <h3>8.1 Color rules (conceptual)</h3>
+    <ul>
+      <li><span class="tag good">Green</span> = segment start</li>
+      <li><span class="tag warn">Red</span> = segment end</li>
+      <li><span class="tag yellow">Yellow</span> = single segment usage</li>
+      <li>Blank scenes are ignored for segment calculations (gaps don’t force a segment end).</li>
+    </ul>
+
+    <h3>8.2 Right‑click overrides</h3>
+    <p>
+      Right‑click a populated cell to open a context menu. You can move an actor:
+    </p>
+    <ul>
+      <li><strong>Move this scene to…</strong> (single scene override)</li>
+      <li><strong>Move entire block to…</strong> (a contiguous run of usage, ignoring blank scenes)</li>
+      <li><strong>Clear override</strong> for scene or block</li>
+    </ul>
+
+    <div class="note callout-good">
+      <strong>Best practice:</strong> Use Timeline overrides to resolve edge cases after auto-assign or manual planning.
+      Overrides are included in Final Output Preview and Excel exports.
+    </div>
+
+    <h2 id="manual">9. Manual Assignment</h2>
+    <p>
+      Use <strong>Manual Assignment</strong> when you want full control of mic group construction.
+      The tab contains:
+    </p>
+    <ul>
+      <li><strong>Compatible Groups</strong> (read‑only helper tables)</li>
+      <li><strong>Mic Groups</strong> (the editable mic plan grid)</li>
+      <li>A right panel with feasibility and advanced options</li>
+    </ul>
+
+    <h3>9.1 Compatible Groups</h3>
+    <ul>
+      <li><strong>Compatible Actor Groups</strong>: combinations of size = Max sharers, where no two actors appear in the same scene.</li>
+      <li><strong>Forced Solo Actors</strong>: actors who cannot share with anyone (always overlap with all others).</li>
+    </ul>
+
+    <h3>9.2 Mic Groups grid</h3>
+    <p>
+      One row per mic, with columns for Actor 1..N (based on Max sharers).
+      Selecting actors updates the canonical mic plan used by the Timeline and Final Output Preview.
+    </p>
+
+    <h3>9.3 Feasibility + advanced options</h3>
+    <ul>
+      <li><strong>Feasibility banner</strong>: indicates whether capacity is sufficient for one-mic-per-actor, given Available microphones and Max sharers.</li>
+      <li><strong>Allow actors on multiple microphones</strong>: enables multi-mic planning mode.</li>
+      <li>Override checkboxes allow selecting already-assigned actors or incompatible actors (expert mode).</li>
+      <li><strong>Mark Actor Complete</strong>: hides an actor once their assignment is settled. If an actor is on multiple mics, the app requires Timeline resolution first.</li>
+    </ul>
+
+    <h2 id="final">10. Final Output Preview & Excel Export</h2>
+    <p>
+      The <strong>Final Output Preview</strong> shows a flat, override-aware view of who uses which mic and in which scenes.
+    </p>
+    <ul>
+      <li>Use <strong>Export Excel Workbook…</strong> to generate an Excel workbook containing:
+        <ul>
+          <li><strong>Mic Plot</strong></li>
+          <li><strong>Sharing</strong></li>
+          <li><strong>Mic List</strong></li>
+          <li><strong>Scenes</strong></li>
+        </ul>
+      </li>
+      <li>Exports consider per-scene overrides.</li>
+    </ul>
+
+    <h2 id="grouping">11. Grouping (Final numbering only)</h2>
+    <p>
+      Grouping affects final mic numbering for outputs only:
+    </p>
+    <ul>
+      <li>Does <strong>not</strong> change the underlying mic plan</li>
+      <li>Does <strong>not</strong> change Timeline behavior</li>
+      <li>Only changes numbering in Final Output Preview and exports</li>
+    </ul>
+    <p>
+      You may group by Actor or by Character. A “Leads” group is supported and prioritized in final ordering.
+    </p>
+
+    <h2 id="exports">12. Export Summary</h2>
+    <ul>
+      <li><strong>Export Actor Summary CSV</strong> (top bar): summary output for analysis/reporting.</li>
+      <li><strong>Export Mic Assignments CSV</strong> (top bar): mic → actor assignments, optionally with final numbering.</li>
+      <li><strong>Download Character–Scene CSV…</strong> (Scenes tab): snapshot matrix for offline editing.</li>
+      <li><strong>Download Character–Actor CSV…</strong> (Cast tab): snapshot mapping for offline editing.</li>
+      <li><strong>Export Excel Workbook…</strong> (Final Output Preview): printable workbook for booth/backstage.</li>
+    </ul>
+
+    <h2 id="help">13. Help & Support</h2>
+    <p>
+      The <strong>Help</strong> tab provides support contact and optional donation information.
+      The same content is available from <strong>Help → About Mic Plot Master</strong>.
+    </p>
+    <div class="note">
+      <strong>Note:</strong> On some computers without a default mail application installed, clicking the email link may not open an email client. The email address can still be copied and used normally.
+    </div>
+
+    <h2 id="trouble">14. Troubleshooting & Best Practices</h2>
+
+    <h3>14.1 “No mic demand” / Auto‑Assign disabled</h3>
+    <ul>
+      <li>Make sure at least one character is assigned to at least one scene in the Scenes tab.</li>
+      <li>Make sure your CSV import includes scene names and character participation rows.</li>
+    </ul>
+
+    <h3>14.2 UNCAST placeholders / unexpected capacity pressure</h3>
+    <ul>
+      <li>If casting is incomplete, uncast characters may still count toward mic demand depending on workflow.</li>
+      <li>Finish casting to reduce ambiguity and improve auto-assignment results.</li>
+    </ul>
+
+    <h3>14.3 Adjacent-swap risk markers (▲)</h3>
+    <ul>
+      <li>Increase Available microphones if possible.</li>
+      <li>Increase Max sharers per mic (if acceptable) to regain feasibility.</li>
+      <li>Reduce overlap in scenes (if the script permits), or use Timeline overrides for edge cases.</li>
+    </ul>
+
+    <h3>14.4 Manual multi‑mic actors</h3>
+    <ul>
+      <li>If an actor ends up on multiple mics in Manual Assignment, resolve per‑scene usage in Timeline before marking them complete.</li>
+    </ul>
+
+    <div class="note callout-good">
+      <strong>Recommended workflow for most productions:</strong>
+      Scenes → Cast → Auto‑Assign → Review → Timeline overrides → Export workbook.
+    </div>
+
+    <p class="muted" style="margin-top: 28px;">
+      Version 2.0 — User Guide generated from application behavior and UI structure.
+    </p>
+  </div>
+</body>
+</html>

@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mic Plot Master 2.0 — User Guide</title>
+
+  <style>
+    :root{
+      --ink:#111;
+      --muted:#555;
+      --border:#d0d0d0;
+      --bg:#fff;
+      --accent:#1f6feb;
+      --warn:#b42318;
+      --good:#1a7f37;
+      --note:#f7f7f8;
+    }
+
+    html, body {
+      background: var(--bg);
+      color: var(--ink);
+      margin: 0;
+      padding: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.45;
+    }
+
+    .page {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 44px 56px;
+    }
+
+    h1 { font-size: 30px; margin-bottom: 6px; }
+    h2 { font-size: 22px; margin-top: 32px; border-top: 1px solid var(--border); padding-top: 14px; }
+    h3 { font-size: 16px; margin-top: 18px; }
+
+    p { margin: 10px 0; }
+    ul, ol { margin-left: 24px; }
+    li { margin: 6px 0; }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .subtitle { color: var(--muted); }
+
+    .toc {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin: 18px 0;
+    }
+
+    .note {
+      background: var(--note);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 14px 0;
+    }
+    .note.good { border-left: 5px solid var(--good); }
+    .note.warn { border-left: 5px solid var(--warn); }
+
+    .backtotop {
+      margin-top: 10px;
+      font-size: 12px;
+    }
+
+    .figure {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      margin: 18px 0;
+    }
+
+    @media print {
+      .page { padding: 0.75in; }
+      a { color: black; text-decoration: none; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="page" id="top">
+
+<h1>Mic Plot Master 2.0 — User Guide</h1>
+<p class="subtitle">
+A practical guide to building, reviewing, and sharing wireless microphone assignments for theatre productions.
+</p>
+
+<div class="note good">
+<strong>Tip:</strong> This guide works offline and prints cleanly using your browser’s “Print → Save as PDF”.
+Disable browser headers and footers for best results.
+</div>
+
+<div class="toc">
+<strong>Contents</strong>
+<ul>
+  <li><a href="#quickstart">1. Quick Start Workflow</a></li>
+  <li><a href="#projects">2. Projects (.mpm2)</a></li>
+  <li><a href="#scenes">3. Scenes Tab</a></li>
+  <li><a href="#cast">4. Cast Tab</a></li>
+  <li><a href="#grouping">5. Grouping Tab</a></li>
+  <li><a href="#constraints">6. Available Microphones & Max Shares</a></li>
+  <li><a href="#manual">7. Manual Microphone Assignment</a></li>
+  <li><a href="#auto">8. Automatic Microphone Assignment</a></li>
+  <li><a href="#timeline">9. Timeline & Risk Indicators</a></li>
+  <li><a href="#final">10. Final Output Preview</a></li>
+  <li><a href="#excel">11. Excel Workbook Exports</a></li>
+  <li><a href="#support">12. Support & Optional Donation</a></li>
+</ul>
+</div>
+
+<div class="figure">
+  <img src="MPM2_Layout.png" alt="Mic Plot Master main interface" style="width:100%; height:auto;">
+</div>
+
+<h2 id="quickstart">1. Quick Start Workflow</h2>
+<ol>
+  <li>Create scenes and characters using the <strong>Scenes</strong> tab.</li>
+  <li>Assign actors to characters in the <strong>Cast</strong> tab.</li>
+  <li>Set <strong>Available Microphones</strong> and <strong>Max Shares Per Mic</strong>.</li>
+  <li>Use <strong>Auto‑Assign</strong> or <strong>Manual Assign</strong>.</li>
+  <li>Review warnings in Mic Assignments, Explanation, and Timeline.</li>
+  <li>Adjust per‑scene if needed in the Timeline.</li>
+  <li>Export final outputs for the booth and backstage.</li>
+</ol>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="projects">2. Projects (.mpm2)</h2>
+<p>
+Projects store scenes, casting, microphone plans, grouping rules, and timeline overrides.
+</p>
+<ul>
+  <li><strong>File → New Project</strong></li>
+  <li><strong>File → Open Project</strong></li>
+  <li><strong>File → Save / Save As</strong></li>
+</ul>
+<div class="note warn">
+Importing scenes or cast via CSV clears any existing microphone plan to prevent mistakes.
+</div>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="scenes">3. Scenes Tab</h2>
+<h3>Manual Entry</h3>
+<ul>
+  <li>Enter scene name and page range</li>
+  <li>Select characters appearing in that scene</li>
+  <li>Add new characters as needed</li>
+</ul>
+<h3>CSV Import</h3>
+<ul>
+  <li>Top row: scene names</li>
+  <li>Second row: page numbers</li>
+  <li>First column: character names</li>
+  <li>X indicates character appears in scene</li>
+</ul>
+<div class="note warn">
+If unsure how to format the CSV file, manually enter 1-2 scenes, then select <b>Download Character-Scene CSV</b> button
+<br>
+<br>
+When CSV is completed, select <b>File > Import Character_Scene_List CSV</b> to import the file.
+<br>
+<br>
+Scenes without characters are treated as intermissions.
+</div>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="cast">4. Cast Tab</h2>
+<h3>Manual Entry</h3>
+<ul>
+  <li>Click <b>Refresh From Project</b> to load all characters that were added on the scenes tab</li>
+  <li>Assign an actor to each character</li>
+  <li>Add new characters as needed by typing their name</li>
+  <li>If actor was already added to previous scene, their name will appear in the dropdown to select for additional characters.</li>
+</ul>
+<h3>CSV Import</h3>
+<ul>
+  <li>First Column: Character Names</li>
+  <li>Second Column: Actor names</li>  
+</ul>
+<div class="note warn">
+Clicking <b>Download Character-Actor CSV</b> button will download a properly formatted CSV file containg all characters added to the Scenes tab and any actors who have already been added to the Cast tab
+<br>
+<br>
+When CSV is completed, select <b>File > Import Character_Actor_List CSV</b> to import the file.
+</div>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="grouping">5. Grouping Tab (Optional)</h2>
+<ul>
+  <li>Leads group always exists</li>
+  <li>Create additional groups as needed</li>
+  <li>Groups affect ordering, not compatibility</li>
+</ul>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="constraints">6. Available Microphones & Max Shares</h2>
+<ul>
+  <li><strong>Available microphones</strong>: total packs</li>
+  <li><strong>Max shares per mic</strong>: limit per pack</li>
+</ul>
+<div class="note warn">
+The app will block impossible combinations.
+</div>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="manual">7. Manual Microphone Assignment</h2>
+<ul>
+  <li>View compatible actor groups</li>
+  <li>Identify forced solo actors</li>
+  <li>Assign actors per mic using dropdowns</li>
+</ul>
+<div class="note warn">
+Actors assigned to multiple mics must be resolved in the Timeline.
+</div>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="auto">8. Automatic Microphone Assignment</h2>
+<ul>
+  <li>Fast optimized assignment</li>
+  <li>Red text indicates risky swaps</li>
+</ul>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="timeline">9. Timeline & Risk Indicators</h2>
+<ul>
+  <li><strong>Green</strong>: first use</li>
+  <li><strong>Red</strong>: last use</li>
+  <li><strong>Yellow</strong>: single‑scene use</li>
+  <li>Black triangle: risky swap</li>
+</ul>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="final">10. Final Output Preview</h2>
+<p>
+Shows final mic assignments per actor and scene.
+</p>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="excel">11. Excel Workbook Exports</h2>
+<ul>
+  <li><strong>Mic Plot</strong></li>
+  <li><strong>Sharing</strong></li>
+  <li><strong>Mic List</strong></li>
+  <li><strong>Scenes</strong></li>
+</ul>
+<div class="backtotop"><a href="#top">Back to contents</a></div>
+
+<h2 id="support">12. Support & Optional Donation</h2>
+<div class="note good">
+<p><strong>Questions or suggestions:</strong>
+<a href="mailto:Chris3460@gmail.com">Chris3460@gmail.com</a>
+</p>
+
+<p><strong>Optional donation:</strong>
+<a href="https://venmo.com/code?user_id=2968534653075456460&created=1776955829">
+Support Mic Plot Master on Venmo
+</a>
+</p>
+
+<p class="subtitle">
+Donations are never required. Thank you for supporting theater.
+</p>
+</div>
+
+<p class="subtitle" style="margin-top:32px;">
+Version 2.0 — Created by Christopher Cass
+</p>
+
+</div>
+</body>
+</html>
