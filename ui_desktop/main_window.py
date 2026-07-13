@@ -35,7 +35,7 @@ from ui_desktop.final_output_preview import FinalOutputPreview
 from ui_desktop.grouping_editor import GroupingEditor
 from ui_desktop.help_tab import HelpTab
 
-from exports.csv_export import export_actor_summary, export_mic_assignments
+from exports.csv_export import export_mic_assignments
 from imports.csv_import import (
     import_character_scene_list_csv,
     import_character_actor_list_csv,
@@ -124,7 +124,6 @@ class MainWindow(QMainWindow):
 
         self.btn_generate = QPushButton("Auto‑Assign Microphones")
         self.btn_manual = QPushButton("Manually Assign Microphones")
-        self.btn_export_actor = QPushButton("Export Actor Summary CSV")
         self.btn_export_mics = QPushButton("Export Mic Assignments CSV")
 
         self.status = QLabel(
@@ -201,7 +200,6 @@ class MainWindow(QMainWindow):
         top_bar.addWidget(self.btn_manual)
 
         export_bar = QHBoxLayout()
-        export_bar.addWidget(self.btn_export_actor)
         export_bar.addWidget(self.btn_export_mics)
         export_bar.addStretch(1)
 
@@ -219,7 +217,6 @@ class MainWindow(QMainWindow):
         # Wiring
         # -----------------------------
         self.btn_generate.clicked.connect(self.generate)
-        self.btn_export_actor.clicked.connect(self.export_actor)
         self.btn_export_mics.clicked.connect(self.export_mics)
         self.btn_manual.clicked.connect(self.open_manual_assignment_tab)
 
@@ -945,14 +942,6 @@ class MainWindow(QMainWindow):
     # =============================
     # Exports
     # =============================
-    def export_actor(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Export Actor Summary CSV", filter="CSV Files (*.csv)"
-        )
-        if path:
-            export_actor_summary(path, self.project)
-            self.status.setText(f"Actor summary exported to {path}")
-
     def export_mics(self):
         if not self.assignments:
             QMessageBox.information(self, "Nothing to export", "Generate mic assignments first.")
@@ -1000,7 +989,6 @@ class MainWindow(QMainWindow):
 
         self.btn_generate.setEnabled(has_demand)
         self.btn_export_mics.setEnabled(bool(self.assignments))
-        self.btn_export_actor.setEnabled(True) 
 
     def on_grouping_changed(self):
         """

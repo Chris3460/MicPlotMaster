@@ -13,10 +13,25 @@ from PyQt6.QtWidgets import (
     QFileDialog,
 )
 
+from PyQt6.QtGui import QWheelEvent
+
 from core.project import ProjectData
 
 from exports.csv_export import export_character_actor_list
 
+class NoScrollComboBox(QComboBox):
+    """
+    Prevent accidental actor changes when using
+    the mouse wheel to scroll the Cast tab.
+    """
+
+    def wheelEvent(self, event: QWheelEvent):
+        # Only allow wheel scrolling when the drop-down
+        # list is actually open.
+        if self.view().isVisible():
+            super().wheelEvent(event)
+        else:
+            event.ignore()
 
 class CastEditor(QWidget):
     """
@@ -82,9 +97,10 @@ class CastEditor(QWidget):
                 self.table.setCellWidget(row, self.COL_ACTOR, actor_combo)
 
     def _create_actor_combo(self, character: str) -> QComboBox:
-        combo = QComboBox()
+        combo = NoScrollComboBox()
         combo.setEditable(True)
         combo.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        combo.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         combo.addItem("")
         for actor in sorted(self.project.actors):
@@ -94,7 +110,11 @@ class CastEditor(QWidget):
         if current_actor:
             combo.setCurrentText(current_actor)
 
-        combo.activated.connect(lambda _: self.commit_actor(combo, character))
+
+        combo.currentTextChanged.connect(
+            lambda _: self.commit_actor(combo, character)
+        )
+
         combo.lineEdit().returnPressed.connect(
             lambda: self.commit_actor(combo, character)
         )
