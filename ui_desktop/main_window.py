@@ -235,21 +235,31 @@ class MainWindow(QMainWindow):
         self.project = ProjectData()
         self.project_path = None
         self.rebind_project()
+        self.assignments = self.project.assignments
         self.status.setText("New project created.")
 
     def open_project(self):
         if not self.confirm_discard_changes():
             return
+
         path, _ = QFileDialog.getOpenFileName(
-            self, "Open Mic Plot Master Project", filter="Mic Plot Master (*.mpm2)"
+            self,
+            "Open Mic Plot Master Project",
+            filter="Mic Plot Master (*.mpm2)",
         )
+
         if not path:
             return
-        self.project = ProjectData.load(path)
-        # Ensure assignments list identity is preserved
-        self.assignments.clear()
-        self.assignments.extend(self.project.assignments)
+
+        loaded_project = ProjectData.load(path)
+
+        self.project = loaded_project
         self.project_path = path
+
+        # Critical: after loading, make self.assignments point to the loaded
+        # project's canonical assignment list.
+        self.assignments = self.project.assignments
+
         self.rebind_project()
 
         self.status.setText(
@@ -333,8 +343,7 @@ class MainWindow(QMainWindow):
         # -----------------------------
         # Canonical assignments sync
         # -----------------------------
-        self.assignments.clear()
-        self.assignments.extend(self.project.assignments)
+        self.assignments = self.project.assignments
 
         self.mic_explanation_positions.clear()
         self.mic_adjacency.clear()
@@ -375,13 +384,7 @@ class MainWindow(QMainWindow):
         # path Auto-Assign uses at the UI layer
         if self.assignments:
             self._render_existing_assignments()
-            
-        # -----------------------------
-        # FINAL: render loaded mic plan
-        # -----------------------------
-        if self.assignments:
-            self._render_existing_assignments()
-            
+                        
         self._suppress_manual_groups_callback = False
             
         
@@ -505,6 +508,52 @@ class MainWindow(QMainWindow):
                 act += 1
 
         return act_by_scene
+        
+    def _replace_mic_assignments(self, new_assignments: list[MicAssignment]) -> None:
+            """
+            Replace the current mic plan without breaking references held by
+            TimelineView, FinalOutputPreview, Manual Assignment, or ProjectData.
+
+            IMPORTANT:
+            Do not simply do:
+                self.assignments = new_assignments
+
+            Several tabs are constructed with a reference to the assignments list.
+            Rebinding self.assignments leaves those tabs pointing at the old list.
+            """
+
+            # Normalize None to an empty list
+            new_assignments = list(new_assignments or [])
+
+            # Make sure self.assignments points at the canonical project list.
+            # If it does not, re-point it before mutating.
+            if self.assignments is not self.project.assignments:
+                self.assignments = self.project.assignments
+
+            # Mutate the existing shared list in-place.
+            self.assignments.clear()
+            self.assignments.extend(new_assignments)
+
+            # Keep project assignments explicitly canonical.
+            self.project.assignments = self.assignments
+
+            # Rebind dependent views defensively in case any were constructed
+            # before the list was normalized.
+            if hasattr(self, "timeline_view"):
+                self.timeline_view.assignments = self.assignments
+
+            if hasattr(self, "final_output_preview"):
+                self.final_output_preview.assignments = self.assignments
+
+            # Manual tab should mirror the canonical plan, but do not let that
+            # trigger on_manual_groups_changed while we are syncing programmatically.
+            if hasattr(self, "manual_tab"):
+                old_suppress = self._suppress_manual_groups_callback
+                self._suppress_manual_groups_callback = True
+                try:
+                    self.manual_tab.load_from_assignments(self.assignments)
+                finally:
+                    self._suppress_manual_groups_callback = old_suppress
 
     # =============================
     # Helpers: adjacency extraction (structured)
@@ -648,14 +697,17 @@ class MainWindow(QMainWindow):
                 prefer_min_shares=True,
                 include_uncast=True,
             )
-            # ✅ Store canonical, serializable assignment objects on the project
-            self.project.assignments[:] = [
-                MicAssignment(mic_number=int(a.mic_number), actors=list(a.actors or []))
+            # Build serializable assignment objects
+            new_plan = [
+                MicAssignment(
+                    mic_number=int(a.mic_number),
+                    actors=list(a.actors or [])
+                )
                 for a in new_assignments
             ]
 
-            # keep self.assignments pointing at project list
-            self.assignments = self.project.assignments
+            # Replace the shared assignment list in-place
+            self._replace_mic_assignments(new_plan)
 
             
             if hasattr(self, "timeline_view"):

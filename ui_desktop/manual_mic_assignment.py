@@ -691,7 +691,7 @@ class ManualMicAssignmentTab(QWidget):
         self._emit_groups_changed()
 
     def _on_available_mics_changed(self, _new_value: int):
-        self.rebuild_groups_only()
+        pass
 
     def _on_allow_multi_changed(self, _state: int):
         for r in range(self.groups_table.rowCount()):
