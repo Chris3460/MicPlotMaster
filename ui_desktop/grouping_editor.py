@@ -93,10 +93,52 @@ class GroupingEditor(QWidget):
             items = sorted(self.project.actors, key=str.lower)
             mapping = self.project.actor_groups
             label = "Actor"
+
         elif mode == "character":
-            items = sorted(self.project.characters, key=str.lower)
+            characters = list(self.project.characters)
+
+            sort_mode = getattr(
+                self.project,
+                "character_sort_mode",
+                "Alphabetical (A-Z)"
+            )
+
+            if sort_mode == "Alphabetical (A-Z)":
+                items = sorted(characters, key=str.casefold)
+
+            elif sort_mode == "Alphabetical (Z-A)":
+                items = sorted(
+                    characters,
+                    key=str.casefold,
+                    reverse=True,
+                )
+
+            elif sort_mode == "Added order":
+                items = characters
+
+            elif sort_mode == "Added order reversed":
+                items = list(reversed(characters))
+
+            elif sort_mode == "Custom":
+                custom_order = getattr(
+                    self.project,
+                    "all_character_custom_order",
+                    [],
+                )
+
+                if custom_order:
+                    items = [
+                        c for c in custom_order
+                        if c in characters
+                    ]
+                else:
+                    items = characters
+            else:
+                items = characters
+
             mapping = self.project.character_groups
             label = "Character"
+
         else:
             items = []
             mapping = {}
@@ -106,7 +148,7 @@ class GroupingEditor(QWidget):
         self.table.setRowCount(len(items))
         self.table.setHorizontalHeaderLabels([label, "Group"])
 
-        groups = [""] + self._all_groups()  # blank = ungrouped
+        groups = [""] + self._all_groups()
 
         for row, name in enumerate(items):
             it = QTableWidgetItem(name)
@@ -117,6 +159,7 @@ class GroupingEditor(QWidget):
             cmb.addItems(groups)
 
             current = (mapping.get(name) or "").strip()
+
             if current in groups:
                 cmb.setCurrentText(current)
             else:
@@ -125,11 +168,14 @@ class GroupingEditor(QWidget):
             def make_handler(nm: str, combo: QComboBox):
                 def _h(_):
                     g = (combo.currentText() or "").strip()
+
                     if g == "":
                         mapping.pop(nm, None)
                     else:
                         mapping[nm] = g
+
                     self._notify()
+
                 return _h
 
             cmb.currentTextChanged.connect(make_handler(name, cmb))

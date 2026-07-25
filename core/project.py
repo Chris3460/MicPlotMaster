@@ -65,6 +65,11 @@ class ProjectData:
     group_names: List[str] = field(default_factory=list)
     actor_groups: Dict[str, str] = field(default_factory=dict)
     character_groups: Dict[str, str] = field(default_factory=dict)
+    
+    # ---------- Character Sorting ----------
+    character_sort_mode: str = "Alphabetical (A-Z)"
+    all_character_custom_order: List[str] = field(default_factory=list)
+    actor_sort_mode: str = "Alphabetical (A-Z)"
 
     # -----------------------------
     # Serialization
@@ -105,6 +110,11 @@ class ProjectData:
             "group_names": self.group_names,
             "actor_groups": self.actor_groups,
             "character_groups": self.character_groups,
+
+            # character sorting
+            "character_sort_mode": self.character_sort_mode,
+            "all_character_custom_order": self.all_character_custom_order,
+            "actor_sort_mode": self.actor_sort_mode,
         }
 
     @classmethod
@@ -151,6 +161,20 @@ class ProjectData:
         project.group_names = data.get("group_names", [])
         project.actor_groups = data.get("actor_groups", {})
         project.character_groups = data.get("character_groups", {})
+        project.character_sort_mode = data.get(
+            "character_sort_mode",
+            "Alphabetical (A-Z)"
+        )
+
+        project.all_character_custom_order = data.get(
+            "all_character_custom_order",
+            []
+        )
+        
+        project.actor_sort_mode = data.get(
+            "actor_sort_mode",
+            "Alphabetical (A-Z)"
+        )
 
         return project
 

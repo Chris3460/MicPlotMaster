@@ -51,8 +51,7 @@ def main():
 
     win = MainWindow()
     win.setWindowIcon(app_icon)
-    win.resize(1200, 700)
-    win.show()
+    win.showMaximized()
 
     sys.exit(app.exec())
 

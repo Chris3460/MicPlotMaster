@@ -12,6 +12,8 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QSpinBox,
     QCheckBox,
+    QComboBox,
+    QAbstractItemView,
     QInputDialog,
     QMessageBox,
     QScrollArea,
@@ -52,7 +54,7 @@ class ScenesEditor(QWidget):
         self.btn_add_scene.clicked.connect(self.add_scene)
 
         self.btn_delete_scene = QPushButton("Delete Scene")
-        self.btn_export_csv = QPushButton("Download Character–Scene CSV…")
+        self.btn_export_csv = QPushButton("Download Character-Scene CSV...")
         self.btn_export_csv.clicked.connect(self.export_scene_csv)
         self.btn_delete_scene.setEnabled(False)
         self.btn_delete_scene.clicked.connect(self.delete_scene)
@@ -94,7 +96,7 @@ class ScenesEditor(QWidget):
         page_row = QHBoxLayout()
         page_row.addWidget(QLabel("Pages"))
         page_row.addWidget(self.start_page)
-        page_row.addWidget(QLabel("–"))
+        page_row.addWidget(QLabel("-"))
         page_row.addWidget(self.end_page)
         page_row.addStretch()
 
@@ -106,6 +108,23 @@ class ScenesEditor(QWidget):
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding
         )
+        self.selected_characters_list.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
+        self.selected_characters_list.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.selected_characters_list.setDragEnabled(False)
+        self.selected_characters_list.setAcceptDrops(False)
+        self.selected_characters_list.setDropIndicatorShown(True)
+        self.selected_characters_list.model().rowsMoved.connect(self._selected_character_rows_moved)
+
+        self.character_sort = QComboBox()
+        self.character_sort.addItems([
+            "Alphabetical (A-Z)",
+            "Alphabetical (Z-A)",
+            "Added order",
+            "Added order reversed",
+            "Custom",
+        ])
+        self.character_sort.setCurrentText("Alphabetical (A-Z)")
+        self.character_sort.currentTextChanged.connect(self.change_character_sort)
 
         selected_scroll = QScrollArea()
         selected_scroll.setWidgetResizable(True)
@@ -115,22 +134,51 @@ class ScenesEditor(QWidget):
         # -------------------------
         # All characters (left list)
         # -------------------------
-        self.characters_layout = QVBoxLayout()
+        self.all_character_sort = QComboBox()
+        self.all_character_sort.addItems([
+            "Alphabetical (A-Z)",
+            "Alphabetical (Z-A)",
+            "Added order",
+            "Added order reversed",
+            "Custom",
+        ])
+        if not hasattr(self.project, "character_sort_mode"):
+            self.project.character_sort_mode = "Alphabetical (A-Z)"
 
-        characters_container = QWidget()
-        characters_container.setLayout(self.characters_layout)
-        characters_container.setSizePolicy(
-            QSizePolicy.Policy.Preferred,
-            QSizePolicy.Policy.Minimum
+        self.all_character_sort.setCurrentText(
+            self.project.character_sort_mode
         )
 
-        characters_scroll = QScrollArea()
-        characters_scroll.setWidgetResizable(True)
-        characters_scroll.setWidget(characters_container)
-        characters_scroll.setSizePolicy(
+
+        # Separate custom order for the All Characters box.
+        # This starts in the current project character order.
+        self.all_character_custom_order = list(
+            getattr(self.project, "all_character_custom_order", []) or self.project.characters
+        )
+        self.project.all_character_custom_order = list(self.all_character_custom_order)
+
+        self.all_character_sort.currentTextChanged.connect(self.change_all_character_sort)
+
+        self.characters_list = QListWidget()
+        self.characters_list.setSizePolicy(
             QSizePolicy.Policy.Expanding,
             QSizePolicy.Policy.Expanding
         )
+        self.characters_list.setSelectionMode(
+            QAbstractItemView.SelectionMode.SingleSelection
+        )
+        self.characters_list.setSelectionBehavior(
+            QAbstractItemView.SelectionBehavior.SelectRows
+        )
+        self.characters_list.setDragDropMode(
+            QAbstractItemView.DragDropMode.InternalMove
+        )
+        self.characters_list.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.characters_list.setDragEnabled(False)
+        self.characters_list.setAcceptDrops(False)
+        self.characters_list.setDropIndicatorShown(True)
+        self.characters_list.itemChanged.connect(self.update_scene_characters)
+        self.characters_list.model().rowsMoved.connect(self._all_character_rows_moved)
 
         # -------------------------
         # Side-by-side character lists
@@ -138,11 +186,36 @@ class ScenesEditor(QWidget):
         lists_row = QHBoxLayout()
 
         left_list = QVBoxLayout()
-        left_list.addWidget(QLabel("All Characters"))
-        left_list.addWidget(characters_scroll)
+
+        left_header = QHBoxLayout()
+        left_header.addWidget(QLabel("All Characters"))
+        left_header.addStretch()
+        left_header.addWidget(QLabel("Sort:"))
+        left_header.addWidget(self.all_character_sort)
+
+        left_list.addLayout(left_header)
+        left_list.addWidget(self.characters_list)
+
+        character_button_row = QHBoxLayout()
+
+        self.btn_edit_selected_character = QPushButton("Edit Selected")
+        self.btn_edit_selected_character.clicked.connect(self.edit_selected_character)
+
+        self.btn_delete_selected_character = QPushButton("Delete Selected")
+        self.btn_delete_selected_character.clicked.connect(self.delete_selected_character)
+
+        character_button_row.addWidget(self.btn_edit_selected_character)
+        character_button_row.addWidget(self.btn_delete_selected_character)
+
+        left_list.addLayout(character_button_row)
 
         right_list = QVBoxLayout()
-        right_list.addWidget(QLabel("Characters in Scene"))
+        right_header = QHBoxLayout()
+        right_header.addWidget(QLabel("Characters in Scene"))
+        right_header.addStretch()
+        right_header.addWidget(QLabel("Sort:"))
+        right_header.addWidget(self.character_sort)
+        right_list.addLayout(right_header)
         right_list.addWidget(selected_scroll)
 
         lists_row.addLayout(left_list, 3)
@@ -151,7 +224,7 @@ class ScenesEditor(QWidget):
         # -------------------------
         # Add character button (fixed)
         # -------------------------
-        self.btn_add_character = QPushButton("Add new character…")
+        self.btn_add_character = QPushButton("Add new character...")
         self.btn_add_character.clicked.connect(self.add_character)
 
         # -------------------------
@@ -193,9 +266,9 @@ class ScenesEditor(QWidget):
             self.on_change()
 
     def _scene_label(self, scene: Scene) -> str:
-        label = f"{scene.name} ({scene.start_page}–{scene.end_page})"
+        label = f"{scene.name} ({scene.start_page}-{scene.end_page})"
         if self._is_intermission_scene(scene):
-            label = f"⏸ INTERMISSION — {label}"
+            label = f"INTERMISSION - {label}"
         return label
 
     def commit_and_advance(self):
@@ -331,44 +404,87 @@ class ScenesEditor(QWidget):
     # Character operations
     # -------------------------------------------------
     def refresh_character_checkboxes(self):
-        while self.characters_layout.count():
-            item = self.characters_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+        with QSignalBlocker(self.characters_list):
+            self.characters_list.clear()
 
+            if not self.current_scene:
+                return
+
+            self._sync_all_character_custom_order()
+
+            ordered_characters = self._ordered_project_characters()
+            custom = self.all_character_sort.currentText() == "Custom"
+
+            self.characters_list.setDragEnabled(custom)
+            self.characters_list.setAcceptDrops(custom)
+
+            for character in ordered_characters:
+                item = QListWidgetItem(character)
+                item.setData(Qt.ItemDataRole.UserRole, character)
+
+                item.setFlags(
+                    item.flags()
+                    | Qt.ItemFlag.ItemIsEnabled
+                    | Qt.ItemFlag.ItemIsSelectable
+                    | Qt.ItemFlag.ItemIsUserCheckable
+                )
+
+                if custom:
+                    item.setFlags(
+                        item.flags()
+                        | Qt.ItemFlag.ItemIsDragEnabled
+                        | Qt.ItemFlag.ItemIsDropEnabled
+                    )
+
+                if character in self.current_scene.characters:
+                    item.setCheckState(Qt.CheckState.Checked)
+                else:
+                    item.setCheckState(Qt.CheckState.Unchecked)
+
+                self.characters_list.addItem(item)
+
+    def _checked_character_names(self):
+        names = []
+
+        for i in range(self.characters_list.count()):
+            item = self.characters_list.item(i)
+            if not item:
+                continue
+
+            if item.checkState() == Qt.CheckState.Checked:
+                name = item.data(Qt.ItemDataRole.UserRole)
+                if name:
+                    names.append(name)
+
+        return names
+
+    def update_scene_characters(self, *args):
         if not self.current_scene:
             return
 
-        for character in self.project.characters:
-            cb = QCheckBox(character)
-            cb.setChecked(character in self.current_scene.characters)
-            cb.stateChanged.connect(self.update_scene_characters)
-            self.characters_layout.addWidget(cb)
-
-    def update_scene_characters(self):
-        if not self.current_scene:
-            return
+        checked_names = self._checked_character_names()
+        checked_set = set(checked_names)
 
         new_chars = [
-            self.characters_layout.itemAt(i).widget().text()
-            for i in range(self.characters_layout.count())
-            if self.characters_layout.itemAt(i).widget().isChecked()
+            c for c in self.current_scene.characters
+            if c in checked_set
         ]
 
-        changed = (new_chars != self.current_scene.characters)
+        for c in checked_names:
+            if c not in new_chars:
+                new_chars.append(c)
+
+        changed = new_chars != self.current_scene.characters
+
         if changed:
             self.current_scene.characters = new_chars
 
-        # Always refresh the right-side list
         self.refresh_selected_characters()
-
-        # 🔑 THIS IS THE FIX:
-        # Scene list labels (INTERMISSION / normal) depend on whether
-        # scene.characters is empty, so the list must be refreshed.
         self.refresh_scene_list()
 
         if changed:
             self._notify_change()
+      
 
     def add_character(self):
         if not self.current_scene:
@@ -381,7 +497,10 @@ class ScenesEditor(QWidget):
         name = name.strip()
         changed = False
 
-        if name not in self.project.characters:
+        existing = self._matching_project_character(name)
+        if existing:
+            name = existing
+        else:
             self.project.characters.append(name)
             self.project.character_to_actor.setdefault(name, None)
             changed = True
@@ -392,12 +511,324 @@ class ScenesEditor(QWidget):
 
         self.refresh_character_checkboxes()
         self.refresh_selected_characters()
-
-        # 🔑 SAME FIX HERE
         self.refresh_scene_list()
 
         if changed:
             self._notify_change()
+
+    def _matching_project_character(self, name: str, exclude: str | None = None) -> str | None:
+        target = name.strip().casefold()
+        exclude_key = exclude.strip().casefold() if exclude else None
+        for character in self.project.characters:
+            key = character.strip().casefold()
+            if key == target and key != exclude_key:
+                return character
+        return None
+
+    def edit_character(self, old_name: str):
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Edit Character",
+            "Character name:",
+            text=old_name,
+        )
+        if not ok:
+            return
+
+        new_name = new_name.strip()
+        if not new_name or new_name == old_name:
+            return
+
+        duplicate = self._matching_project_character(new_name, exclude=old_name)
+        if duplicate:
+            QMessageBox.warning(
+                self,
+                "Character Already Exists",
+                f"A character named '{duplicate}' already exists.",
+            )
+            return
+
+        for i, character in enumerate(self.project.characters):
+            if character == old_name:
+                self.project.characters[i] = new_name
+                break
+
+        if old_name in self.project.character_to_actor:
+            self.project.character_to_actor[new_name] = self.project.character_to_actor.pop(old_name)
+        else:
+            self.project.character_to_actor.setdefault(new_name, None)
+
+        if hasattr(self.project, "character_groups") and old_name in self.project.character_groups:
+            self.project.character_groups[new_name] = self.project.character_groups.pop(old_name)
+
+        for scene in self.project.scenes:
+            scene.characters = [new_name if c == old_name else c for c in scene.characters]
+
+        self._rename_all_character_custom_order(old_name, new_name)
+
+        self.refresh_character_checkboxes()
+        self.refresh_selected_characters()
+        self.refresh_scene_list()
+        self._notify_change()
+
+    def delete_character(self, character: str):
+        reply = QMessageBox.question(
+            self,
+            "Delete Character",
+            (
+                f"Delete '{character}'?\n\n"
+                "This character will be deleted from the project and removed "
+                "from every scene where it has already been added."
+            ),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.project.characters = [c for c in self.project.characters if c != character]
+        self.project.character_to_actor.pop(character, None)
+        if hasattr(self.project, "character_groups"):
+            self.project.character_groups.pop(character, None)
+
+        for scene in self.project.scenes:
+            scene.characters = [c for c in scene.characters if c != character]
+
+        self._sync_all_character_custom_order()
+
+        self.refresh_character_checkboxes()
+        self.refresh_selected_characters()
+        self.refresh_scene_list()
+        self._notify_change()
+        
+    def _selected_all_character_name(self):
+        item = self.characters_list.currentItem()
+
+        if not item:
+            QMessageBox.information(
+                self,
+                "No Character Selected",
+                "Select a character first.",
+            )
+            return None
+
+        name = item.data(Qt.ItemDataRole.UserRole)
+
+        if not name:
+            QMessageBox.information(
+                self,
+                "No Character Selected",
+                "Select a character first.",
+            )
+            return None
+
+        return name
+
+    def edit_selected_character(self):
+        name = self._selected_all_character_name()
+
+        if not name:
+            return
+
+        self.edit_character(name)
+
+    def delete_selected_character(self):
+        name = self._selected_all_character_name()
+
+        if not name:
+            return
+
+        self.delete_character(name)
+
+    def change_character_sort(self):
+        if not self.current_scene:
+            return
+
+        if self.character_sort.currentText() == "Custom":
+            visible_order = [
+                self.selected_characters_list.item(i).text()
+                for i in range(self.selected_characters_list.count())
+            ]
+            if visible_order and visible_order != self.current_scene.characters:
+                self.current_scene.characters = visible_order
+                self._notify_change()
+
+        self.refresh_selected_characters()
+
+    def _selected_character_rows_moved(self, *args):
+        if not self.current_scene:
+            return
+        if self.character_sort.currentText() != "Custom":
+            return
+
+        new_order = [
+            self.selected_characters_list.item(i).text()
+            for i in range(self.selected_characters_list.count())
+        ]
+        if new_order != self.current_scene.characters:
+            self.current_scene.characters = new_order
+            self._notify_change()
+            
+    def _all_character_rows_moved(self, *args):
+        if self.all_character_sort.currentText() != "Custom":
+            return
+
+        new_order = []
+
+        for i in range(self.characters_list.count()):
+            item = self.characters_list.item(i)
+            if not item:
+                continue
+
+            name = item.data(Qt.ItemDataRole.UserRole)
+            if name:
+                new_order.append(name)
+
+        if new_order != self.all_character_custom_order:
+            self.all_character_custom_order = new_order
+            self.project.all_character_custom_order = list(
+                self.all_character_custom_order
+            )
+
+            self.refresh_selected_characters()
+            self._notify_change()
+
+    def _ordered_scene_characters(self) -> list[str]:
+        if not self.current_scene:
+            return []
+
+        characters = list(self.current_scene.characters)
+        mode = self.character_sort.currentText()
+
+        if mode == "Alphabetical (A-Z)":
+            return sorted(characters, key=str.casefold)
+        if mode == "Alphabetical (Z-A)":
+            return sorted(characters, key=str.casefold, reverse=True)
+        if mode == "Added order":
+            order = {name: i for i, name in enumerate(self.project.characters)}
+            return sorted(characters, key=lambda c: order.get(c, 10**9))
+        if mode == "Added order reversed":
+            order = {name: i for i, name in enumerate(self.project.characters)}
+            return sorted(characters, key=lambda c: order.get(c, -1), reverse=True)
+
+        return characters
+        
+    def change_all_character_sort(self):
+        self.project.character_sort_mode = (
+            self.all_character_sort.currentText()
+        )
+
+        self._sync_all_character_custom_order()
+        self.refresh_character_checkboxes()
+
+
+    def _sync_all_character_custom_order(self):
+        """
+        Keep the All Characters custom order aligned with the current project characters:
+        - remove deleted characters
+        - append newly added characters
+        - preserve existing custom ordering
+        """
+        if not hasattr(self, "all_character_custom_order"):
+            self.all_character_custom_order = list(
+                getattr(self.project, "all_character_custom_order", []) or self.project.characters
+            )
+
+        current_characters = list(self.project.characters)
+        current_set = set(current_characters)
+
+        self.all_character_custom_order = [
+            c for c in self.all_character_custom_order
+            if c in current_set
+        ]
+
+        for character in current_characters:
+            if character not in self.all_character_custom_order:
+                self.all_character_custom_order.append(character)
+
+        self.project.all_character_custom_order = list(self.all_character_custom_order)
+
+
+    def _rename_all_character_custom_order(
+        self,
+        old_name: str,
+        new_name: str,
+    ):
+        if not hasattr(self, "all_character_custom_order"):
+            self.all_character_custom_order = list(
+                getattr(
+                    self.project,
+                    "all_character_custom_order",
+                    [],
+                )
+                or self.project.characters
+            )
+
+        self.all_character_custom_order = [
+            new_name if c == old_name else c
+            for c in self.all_character_custom_order
+        ]
+
+        if new_name not in self.all_character_custom_order:
+            self.all_character_custom_order.append(new_name)
+
+        self.project.all_character_custom_order = list(
+            self.all_character_custom_order
+        )
+
+        self._sync_all_character_custom_order()
+
+
+    def move_all_character_custom_order(self, character: str, direction: int):
+        """
+        Move one character up/down in the All Characters custom order.
+        direction = -1 for up, +1 for down.
+        """
+        self._sync_all_character_custom_order()
+
+        try:
+            idx = self.all_character_custom_order.index(character)
+        except ValueError:
+            return
+
+        new_idx = idx + direction
+        if new_idx < 0 or new_idx >= len(self.all_character_custom_order):
+            return
+
+        self.all_character_custom_order[idx], self.all_character_custom_order[new_idx] = (
+            self.all_character_custom_order[new_idx],
+            self.all_character_custom_order[idx],
+        )
+
+        self.project.all_character_custom_order = list(self.all_character_custom_order)
+
+        self.refresh_character_checkboxes()
+        self.refresh_selected_characters()
+        self._notify_change()
+
+
+    def _ordered_project_characters(self) -> list[str]:
+        characters = list(self.project.characters)
+
+        mode = self.all_character_sort.currentText()
+
+        if mode == "Alphabetical (A-Z)":
+            return sorted(characters, key=str.casefold)
+
+        if mode == "Alphabetical (Z-A)":
+            return sorted(characters, key=str.casefold, reverse=True)
+
+        if mode == "Added order":
+            return characters
+
+        if mode == "Added order reversed":
+            return list(reversed(characters))
+
+        if mode == "Custom":
+            self._sync_all_character_custom_order()
+            return list(self.all_character_custom_order)
+
+        return characters
 
     def refresh_selected_characters(self):
         self.selected_characters_list.clear()
@@ -405,7 +836,11 @@ class ScenesEditor(QWidget):
         if not self.current_scene:
             return
 
-        for name in sorted(self.current_scene.characters, key=str.lower):
+        custom = self.character_sort.currentText() == "Custom"
+        self.selected_characters_list.setDragEnabled(custom)
+        self.selected_characters_list.setAcceptDrops(custom)
+
+        for name in self._ordered_scene_characters():
             self.selected_characters_list.addItem(name)
             
     def export_scene_csv(self):
@@ -422,3 +857,5 @@ class ScenesEditor(QWidget):
             path += ".csv"
 
         export_character_scene_list(path, self.project)
+
+
