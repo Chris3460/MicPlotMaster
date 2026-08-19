@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QPushButton,
     QFileDialog,
+    QCheckBox,
 )
 from PyQt6.QtCore import Qt
 
@@ -41,6 +42,23 @@ class FinalOutputPreview(QWidget):
         header.addWidget(title)
         header.addStretch(1)
 
+        self.chk_manual_order = QCheckBox(
+            "Use Manual Assignment mic order for output"
+        )
+
+        self.chk_manual_order.setChecked(
+            getattr(
+                self.project,
+                "manual_output_order_override",
+                False
+            )
+        )
+
+        self.chk_manual_order.toggled.connect(
+            self._manual_order_changed
+        )
+
+        header.addWidget(self.chk_manual_order)        
         self.btn_export_excel = QPushButton("Export Excel Workbook…")
         self.btn_export_excel.clicked.connect(self.export_excel)
         header.addWidget(self.btn_export_excel)
@@ -76,6 +94,15 @@ class FinalOutputPreview(QWidget):
             return
 
         self.btn_export_excel.setEnabled(True)
+
+        has_assignments = bool(self.assignments)
+
+        self.chk_manual_order.setEnabled(
+            has_assignments
+        )
+
+        if not has_assignments:
+            self.chk_manual_order.setChecked(False)
 
         overrides = self._overrides()
 
@@ -185,3 +212,7 @@ class FinalOutputPreview(QWidget):
             self.project,
             self.assignments,
         )
+        
+    def _manual_order_changed(self, checked):
+        self.project.manual_output_order_override = checked
+        self.refresh()

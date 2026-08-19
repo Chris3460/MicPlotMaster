@@ -47,7 +47,15 @@ def compute_final_mic_numbering(
     - Shared mic: belongs to group of actor with most mic scenes among sharers; Leads always wins.
     - Character-based grouping resolves actor group from characters (Leads wins; grouped beats ungrouped; tie ok).
     """
-
+    if getattr(
+        project,
+        "manual_output_order_override",
+        False
+    ):
+        return {
+            int(a.mic_number): int(a.mic_number)
+            for a in assignments
+        }
     timelines = derive_actor_timelines(project, include_uncast=True)
     scene_counts: Dict[str, int] = {name: len(t.indices) for name, t in timelines.items()}
     scene_sets: Dict[str, Set[int]] = {name: set(t.indices) for name, t in timelines.items()}

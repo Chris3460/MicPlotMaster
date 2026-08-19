@@ -65,6 +65,9 @@ class ProjectData:
     group_names: List[str] = field(default_factory=list)
     actor_groups: Dict[str, str] = field(default_factory=dict)
     character_groups: Dict[str, str] = field(default_factory=dict)
+
+    # ---------- Final Output ----------
+    manual_output_order_override: bool = False
     
     # ---------- Character Sorting ----------
     character_sort_mode: str = "Alphabetical (A-Z)"
@@ -110,6 +113,7 @@ class ProjectData:
             "group_names": self.group_names,
             "actor_groups": self.actor_groups,
             "character_groups": self.character_groups,
+            "manual_output_order_override": self.manual_output_order_override,
 
             # character sorting
             "character_sort_mode": self.character_sort_mode,
@@ -161,6 +165,10 @@ class ProjectData:
         project.group_names = data.get("group_names", [])
         project.actor_groups = data.get("actor_groups", {})
         project.character_groups = data.get("character_groups", {})
+        project.manual_output_order_override = data.get(
+            "manual_output_order_override",
+            False
+        )
         project.character_sort_mode = data.get(
             "character_sort_mode",
             "Alphabetical (A-Z)"

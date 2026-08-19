@@ -35,7 +35,7 @@ from ui_desktop.final_output_preview import FinalOutputPreview
 from ui_desktop.grouping_editor import GroupingEditor
 from ui_desktop.help_tab import HelpTab
 
-from exports.csv_export import export_mic_assignments
+
 from imports.csv_import import (
     import_character_scene_list_csv,
     import_character_actor_list_csv,
@@ -124,7 +124,6 @@ class MainWindow(QMainWindow):
 
         self.btn_generate = QPushButton("Auto‑Assign Microphones")
         self.btn_manual = QPushButton("Manually Assign Microphones")
-        self.btn_export_mics = QPushButton("Export Mic Assignments CSV")
 
         self.status = QLabel(
             "Solo mics preferred when possible. Adjacent-scene swaps are flagged as last resort."
@@ -199,13 +198,8 @@ class MainWindow(QMainWindow):
         top_bar.addSpacing(10)
         top_bar.addWidget(self.btn_manual)
 
-        export_bar = QHBoxLayout()
-        export_bar.addWidget(self.btn_export_mics)
-        export_bar.addStretch(1)
-
         root = QVBoxLayout()
         root.addLayout(top_bar)
-        root.addLayout(export_bar)
         root.addWidget(self.tabs)
         root.addWidget(self.status)
 
@@ -217,7 +211,6 @@ class MainWindow(QMainWindow):
         # Wiring
         # -----------------------------
         self.btn_generate.clicked.connect(self.generate)
-        self.btn_export_mics.clicked.connect(self.export_mics)
         self.btn_manual.clicked.connect(self.open_manual_assignment_tab)
 
         self.update_controls()
@@ -661,8 +654,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "final_output_preview"):
             self.final_output_preview.refresh()
 
-        # ---- Enable exports ----
-        self.btn_export_mics.setEnabled(True)
+
         
         # ---- Refresh dependent views ----
         if hasattr(self, "timeline_view"):
@@ -994,37 +986,6 @@ class MainWindow(QMainWindow):
     # =============================
     # Exports
     # =============================
-    def export_mics(self):
-        if not self.assignments:
-            QMessageBox.information(self, "Nothing to export", "Generate mic assignments first.")
-            return
-
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Export Mic Assignments CSV", filter="CSV Files (*.csv)"
-        )
-        if not path:
-            return
-
-        # FINAL OUTPUT ONLY:
-        # Compute final mic numbering without mutating the plan or timeline
-        final_numbering = compute_final_mic_numbering(
-            project=self.project,
-            assignments=self.assignments,
-            actor_groups=getattr(self.project, "actor_groups", None),
-            group_order=getattr(self.project, "group_order", None),
-        )
-
-        export_mic_assignments(
-            path,
-            self.assignments,
-            final_numbering=final_numbering,
-        )
-
-        self.status.setText(f"Mic assignments exported to {path}")
-
-    # =============================
-    # UI state
-    # =============================
 
     def update_controls(self):
         """
@@ -1040,7 +1001,7 @@ class MainWindow(QMainWindow):
         has_demand = bool(timelines)  # any mic users, including UNCAST placeholders
 
         self.btn_generate.setEnabled(has_demand)
-        self.btn_export_mics.setEnabled(bool(self.assignments))
+ 
 
     def on_grouping_changed(self):
         """
@@ -1082,7 +1043,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "final_output_preview"):
             self.final_output_preview.refresh()
 
-        self.btn_export_mics.setEnabled(bool(self.assignments))
         self.status.setText(
             f"Manual mic groups updated: {len(self.assignments)} mic(s) defined."
         )
@@ -1160,9 +1120,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, "grouping_editor"):
             self.grouping_editor.refresh()
 
-        # Enable exports
-        self.btn_export_mics.setEnabled(True)
-      
+
     def activate_loaded_mic_plan(self):
         print("🔥 activate_loaded_mic_plan CALLED")
 
@@ -1217,7 +1175,6 @@ class MainWindow(QMainWindow):
         if hasattr(self, "final_output_preview"):
             self.final_output_preview.refresh()
 
-        self.btn_export_mics.setEnabled(True)
         
     def show_about_dialog(self):
         dialog = QDialog(self)

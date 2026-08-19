@@ -91,39 +91,6 @@ def export_actor_summary(path: str, project) -> None:
             )
 
 
-def export_mic_assignments(
-    path: str,
-    assignments: List[MicAssignment],
-    *,
-    final_numbering: Optional[Dict[int, int]] = None,
-) -> None:
-    """
-    If final_numbering is provided:
-        writes FinalMicNumber instead of internal MicNumber.
-    final_numbering maps: internal_mic_number -> final_display_number
-    """
-    with open(path, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f)
-
-        if final_numbering:
-            w.writerow(["FinalMicNumber", "InternalMicNumber", "Actor"])
-        else:
-            w.writerow(["MicNumber", "Actor"])
-
-        for m in assignments:
-            internal = int(m.mic_number)
-            out_num = (
-                int(final_numbering.get(internal, internal))
-                if final_numbering
-                else internal
-            )
-
-            for actor in m.actors:
-                if final_numbering:
-                    w.writerow([out_num, internal, actor])
-                else:
-                    w.writerow([internal, actor])
-
 
 def export_character_scene_list(
     path: str,
