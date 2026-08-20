@@ -401,11 +401,13 @@ class TimelineView(QWidget):
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 item.setBackground(bg)
+                item.setForeground(QBrush(QColor("#000000")))
                 self.table.setItem(0, c, item)
             else:
                 filler = QTableWidgetItem("")
                 filler.setFlags(filler.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 filler.setBackground(LEG_BG)
+                filler.setForeground(QBrush(QColor("#000000")))
                 self.table.setItem(0, c, filler)
 
         # Pages row
@@ -424,6 +426,7 @@ class TimelineView(QWidget):
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
             item.setFont(pages_font)
             item.setBackground(gray_bg)
+            item.setForeground(QBrush(QColor("#000000")))
             self.table.setItem(1, c, item)
 
         if not scenes or not mics:
@@ -547,14 +550,20 @@ class TimelineView(QWidget):
                 is_end = c in seg_end
                 is_single = c in seg_single
                 bg = bg_for_cell(is_start, is_end, is_single)
-
+                
                 prefix = "▲ " if c in risky_next else ""
+
                 item = QTableWidgetItem(prefix + "\n".join(actors))
                 item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsEditable)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+
                 if bg is not None:
                     item.setBackground(bg)
-                cells_written += 1
+                    item.setForeground(QBrush(QColor("#000000")))
+
+                if bg is not None:
+                    item.setBackground(bg)
+
                 self.table.setItem(row, c, item)
 
         self._finalize_table()
