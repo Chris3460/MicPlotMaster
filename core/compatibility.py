@@ -40,7 +40,11 @@ def compatible_groups(
     scene_index = build_scene_index(project)
 
     actors = sorted(
-        set(project.character_to_actor.values()),
+        (
+            actor
+            for actor in project.character_to_actor.values()
+            if isinstance(actor, str) and actor.strip()
+        ),
         key=str.lower
     )
 

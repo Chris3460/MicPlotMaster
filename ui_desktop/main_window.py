@@ -47,7 +47,7 @@ from imports.csv_import import (
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Mic Plot Master 2.0")
+        self.setWindowTitle("Mic Plot Master 2.0.8")
 
         # -----------------------------
         # Project state
