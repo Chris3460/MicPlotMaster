@@ -1,4 +1,15 @@
-from __future__ import annotations
+﻿from __future__ import annotations
+
+import os
+from pathlib import Path
+
+RECOVERY_DIR = (
+    Path(os.environ["LOCALAPPDATA"])
+    / "MicPlotMaster"
+)
+
+RECOVERY_FILE = RECOVERY_DIR / "Recovery.mpm2"
+
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction, QBrush, QColor
@@ -47,7 +58,7 @@ from imports.csv_import import (
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Mic Plot Master 2.0.9")
+        self.setWindowTitle("Mic Plot Master 2.0.10")
 
         # -----------------------------
         # Project state
@@ -214,10 +225,20 @@ class MainWindow(QMainWindow):
         self.btn_manual.clicked.connect(self.open_manual_assignment_tab)
 
         self.update_controls()
-        
+
+        # Auto-recovery every minute
+        self.autosave_timer = QTimer(self)
+        self.autosave_timer.timeout.connect(
+            self.autosave_recovery
+        )
+        self.autosave_timer.start(60000)
+
         # ✅ Render loaded mic plan on initial startup
         if self.assignments:
             self._render_existing_assignments()
+
+        # Check for crash recovery
+        self.check_recovery_file()
 
     # =============================
     # Project lifecycle
@@ -379,6 +400,70 @@ class MainWindow(QMainWindow):
             self._render_existing_assignments()
                         
         self._suppress_manual_groups_callback = False
+        
+    def autosave_recovery(self):
+        if not self.project.scenes and not self.project.characters:
+            return
+
+        try:
+            RECOVERY_DIR.mkdir(
+                parents=True,
+                exist_ok=True
+            )
+
+            self.project.save(
+                str(RECOVERY_FILE)
+            )
+
+        except Exception:
+            pass
+
+
+    def check_recovery_file(self):
+        if not RECOVERY_FILE.exists():
+            return
+
+        reply = QMessageBox.question(
+            self,
+            "Recover Previous Session",
+            (
+                "Mic Plot Master found unsaved work from a "
+                "previous session.\n\n"
+                "Would you like to recover it?"
+            ),
+            QMessageBox.StandardButton.Yes
+            | QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                self.project = ProjectData.load(
+                    str(RECOVERY_FILE)
+                )
+
+                self.project_path = "Recovered Session"
+                self.assignments = self.project.assignments
+
+                self.rebind_project()
+
+                self.status.setText(
+                    "Recovered previous session."
+                )
+
+            except Exception as e:
+                QMessageBox.warning(
+                    self,
+                    "Recovery Failed",
+                    str(e)
+                )
+
+        try:
+            if RECOVERY_FILE.exists():
+                RECOVERY_FILE.unlink()
+        except Exception:
+            pass
+
+
             
         
 # =============================   ============
