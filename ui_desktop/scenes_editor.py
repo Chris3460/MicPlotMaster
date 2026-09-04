@@ -858,4 +858,20 @@ class ScenesEditor(QWidget):
 
         export_character_scene_list(path, self.project)
 
+    def select_scene_by_index(self, scene_index: int):
+        """
+        Select a scene in the scene list and scroll to it.
+        """
+        if scene_index < 0:
+            return
+
+        if scene_index >= self.scene_list.count():
+            return
+
+        self.scene_list.setCurrentRow(scene_index)
+
+        item = self.scene_list.item(scene_index)
+
+        if item:
+            self.scene_list.scrollToItem(item)
 

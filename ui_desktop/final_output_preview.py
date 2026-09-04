@@ -83,7 +83,13 @@ class FinalOutputPreview(QWidget):
     # -----------------------------
     def _overrides(self) -> dict:
         return getattr(self.project, "mic_scene_overrides", {}) or {}
+    def _unresolved_timeline_count(self) -> int:
+        main_window = self.window()
 
+        if not hasattr(main_window, "timeline_view"):
+            return 0
+
+        return main_window.timeline_view.unresolved_scene_count()
     # -----------------------------
     # Refresh
     # -----------------------------
@@ -93,7 +99,19 @@ class FinalOutputPreview(QWidget):
             self.btn_export_excel.setEnabled(False)
             return
 
-        self.btn_export_excel.setEnabled(True)
+        unresolved_count = self._unresolved_timeline_count()
+
+        self.btn_export_excel.setEnabled(
+            unresolved_count == 0
+        )
+
+        if unresolved_count > 0:
+            self.btn_export_excel.setToolTip(
+                f"{unresolved_count} actor-scene microphone assignment(s) "
+                "must be resolved on the Timeline before export."
+            )
+        else:
+            self.btn_export_excel.setToolTip("")
 
         has_assignments = bool(self.assignments)
 
@@ -191,6 +209,23 @@ class FinalOutputPreview(QWidget):
     # -----------------------------
     def export_excel(self):
         if not self.assignments:
+            return
+
+        unresolved_count = self._unresolved_timeline_count()
+
+        if unresolved_count > 0:
+            from PyQt6.QtWidgets import QMessageBox
+
+            QMessageBox.warning(
+                self,
+                "Timeline resolution incomplete",
+                (
+                    f"{unresolved_count} actor-scene microphone "
+                    "assignment(s) are still unresolved.\n\n"
+                    "Resolve every entry in the red UNASSIGNED "
+                    "timeline row before exporting."
+                ),
+            )
             return
 
         path, _ = QFileDialog.getSaveFileName(

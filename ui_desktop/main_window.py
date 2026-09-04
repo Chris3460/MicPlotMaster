@@ -31,7 +31,10 @@ from PyQt6.QtWidgets import (
 )
 
 from core.project import ProjectData, MicAssignment
-from core.optimizer_scored import auto_assign_mics_scored
+from core.optimizer_scored import (
+    auto_assign_mics_scored,
+    PartialMicAssignmentError,
+)
 from core.timeline import uncast_characters_used, derive_actor_timelines
 from core.scoring import pair_metrics
 from core.explain import explain_mic_group
@@ -58,7 +61,7 @@ from imports.csv_import import (
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Mic Plot Master 2.0.10")
+        self.setWindowTitle("Mic Plot Master 2.0.11")
 
         # -----------------------------
         # Project state
@@ -174,7 +177,11 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.tbl_assignments, "Mic Assignments")
         self.tabs.addTab(self.txt_explanation, "Mic Explanation")
 
-        self.timeline_view = TimelineView(self.project, self.assignments)
+        self.timeline_view = TimelineView(
+            self.project,
+            self.assignments,
+            on_resolution_changed=self.on_manual_resolution_changed,
+        )
         self.tabs.addTab(self.timeline_view, "Timeline")
 
         self.final_output_preview = FinalOutputPreview(self.project, self.assignments)
@@ -366,7 +373,11 @@ class MainWindow(QMainWindow):
         # -----------------------------
         # Timeline
         # -----------------------------
-        self.timeline_view = TimelineView(self.project, self.assignments)
+        self.timeline_view = TimelineView(
+            self.project,
+            self.assignments,
+            on_resolution_changed=self.on_manual_resolution_changed,
+        )
         self.tabs.addTab(self.timeline_view, "Timeline")
 
         # -----------------------------
@@ -561,6 +572,39 @@ class MainWindow(QMainWindow):
             for idx in t.indices:
                 counts[idx] = counts.get(idx, 0) + 1
         return counts
+        
+    def _find_scene_capacity_violations(self) -> list[dict]:
+        """
+        Returns scenes requiring more mics than are available.
+
+        Each entry:
+        {
+            "scene_index": int,
+            "scene_name": str,
+            "required": int,
+            "over_by": int,
+        }
+        """
+        available = self.available_mics.value()
+
+        mic_users_by_scene = self._compute_mic_users_by_scene()
+
+        violations = []
+
+        for scene_idx, count in mic_users_by_scene.items():
+
+            if count > available:
+
+                scene = self.project.scenes[scene_idx]
+
+                violations.append({
+                    "scene_index": scene_idx,
+                    "scene_name": scene.name,
+                    "required": count,
+                    "over_by": count - available,
+                })
+
+        return violations
 
     def _infer_act_by_scene(self) -> dict[int, int]:
         """
@@ -751,7 +795,56 @@ class MainWindow(QMainWindow):
         if hasattr(self, "manual_tab"):
             self.manual_tab.load_from_assignments(self.assignments)
 
+    def _load_partial_mic_plan(
+        self,
+        partial_assignments,
+        unassigned_actors,
+    ):
+        """
+        Load the optimizer's usable partial plan and display unresolved actors
+        in the Timeline's UNASSIGNED row.
+        """
 
+        new_plan = [
+            MicAssignment(
+                mic_number=int(a.mic_number),
+                actors=list(a.actors or []),
+            )
+            for a in partial_assignments
+        ]
+
+        self._replace_mic_assignments(new_plan)
+
+        # Clear old routing overrides before starting a new resolution session.
+        self.project.mic_scene_overrides.clear()
+
+        self.timeline_view.set_unassigned_actors(
+            list(unassigned_actors)
+        )
+
+        self.timeline_view.refresh()
+        self.final_output_preview.refresh()
+
+        self.tabs.setCurrentWidget(self.timeline_view)
+
+        names = "\n".join(
+            f"• {name}" for name in unassigned_actors
+        )
+
+        QMessageBox.warning(
+            self,
+            "Manual timeline resolution required",
+            (
+                "Mic Plot Master assigned as much of the show as possible, "
+                "but could not place the following actor(s) on one microphone:\n\n"
+                f"{names}\n\n"
+                "The Timeline now includes a red UNASSIGNED row.\n\n"
+                "Right-click an actor's scene in that row to assign that scene "
+                "or block to an available microphone.\n\n"
+                "Final output and Excel export will remain unavailable until "
+                "the UNASSIGNED row is empty."
+            ),
+        )
     # =============================
     # Generate plan + adjacency risk handling (Option A)
     # =============================
@@ -764,6 +857,16 @@ class MainWindow(QMainWindow):
             return
 
         uncast = uncast_characters_used(self.project)
+        
+        # ----------------------------------
+        # Scene-capacity feasibility check
+        # ----------------------------------
+
+        violations = self._find_scene_capacity_violations()
+
+        if violations:
+            self.show_scene_capacity_dialog(violations)
+            return
 
         # Run optimizer with guard + suggestions (+ one-click set max sharers + auto re-run)
         try:
@@ -792,7 +895,13 @@ class MainWindow(QMainWindow):
 
             if hasattr(self, "final_output_preview"):
                 self.final_output_preview.refresh()
-                
+        
+        except PartialMicAssignmentError as e:
+            self._load_partial_mic_plan(
+                e.partial_assignments,
+                e.unassigned_actors,
+            )
+            return        
         except ValueError as e:
             timelines = derive_actor_timelines(self.project, include_uncast=True)
             mic_users = len(timelines)
@@ -1132,6 +1241,27 @@ class MainWindow(QMainWindow):
             f"Manual mic groups updated: {len(self.assignments)} mic(s) defined."
         )
         
+    def on_manual_resolution_changed(self):
+        """
+        Called when an actor is moved out of the UNASSIGNED timeline row.
+        """
+
+        if hasattr(self, "timeline_view"):
+            unresolved = self.timeline_view.unresolved_scene_count()
+
+            if unresolved > 0:
+                self.status.setText(
+                    f"Manual resolution required: "
+                    f"{unresolved} actor-scene assignment(s) remain."
+                )
+            else:
+                self.status.setText(
+                    "Manual timeline resolution complete. "
+                    "Final output and export are now available."
+                )
+
+        if hasattr(self, "final_output_preview"):
+            self.final_output_preview.refresh()    
     def refresh_all_views(self):
         """
         Refresh all views that depend on mic routing / overrides.
@@ -1298,3 +1428,80 @@ class MainWindow(QMainWindow):
             return
 
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(guide_path)))
+        
+    def show_scene_capacity_dialog(self, violations):
+        """
+        Show a friendly scene-capacity error and optionally
+        jump directly to problem scenes.
+        """
+
+        available = self.available_mics.value()
+
+        highest_required = max(v["required"] for v in violations)
+
+        text_lines = [
+            "The following scenes require more microphones than are currently available.",
+            "",
+            f"Available microphones: {available}",
+            "",
+            "Problem scenes:",
+            ""
+        ]
+
+        for v in violations:
+            text_lines.extend([
+                f"• {v['scene_name']}",
+                f"    Requires: {v['required']} microphones",
+                f"    Over limit by: {v['over_by']}",
+                ""
+            ])
+
+        text_lines.extend([
+            f"Increase available microphones to at least {highest_required}",
+            "or reduce mic demand in the scenes above."
+        ])
+
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Warning)
+        msg.setWindowTitle("Mic Demand Exceeds Available Microphones")
+        msg.setText("\n".join(text_lines))
+
+        btn_increase = msg.addButton(
+            f"Increase Mics to {highest_required}",
+            QMessageBox.ButtonRole.AcceptRole,
+        )
+
+        scene_buttons = {}
+
+        for v in violations:
+            btn = msg.addButton(
+                f"Go To: {v['scene_name']}",
+                QMessageBox.ButtonRole.ActionRole,
+            )
+            scene_buttons[btn] = v["scene_index"]
+
+        btn_close = msg.addButton(
+            QMessageBox.StandardButton.Close
+        )
+
+        while True:
+
+            msg.exec()
+
+            clicked = msg.clickedButton()
+
+            if clicked == btn_increase:
+                self.available_mics.setValue(highest_required)
+                return
+
+            if clicked in scene_buttons:
+
+                self.tabs.setCurrentWidget(self.scenes_editor)
+
+                self.scenes_editor.select_scene_by_index(
+                    scene_buttons[clicked]
+                )
+
+                continue
+
+            return

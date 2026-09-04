@@ -12,6 +12,24 @@ from core.scoring import ScoreWeights, score_group, pair_metrics
 class MicAssignment:
     mic_number: int
     actors: List[str]
+    
+class PartialMicAssignmentError(ValueError):
+    """
+    Raised when the optimizer can assign some actors but cannot place all of them.
+
+    partial_assignments contains the usable portion of the plan.
+    unassigned_actors contains every actor still needing manual resolution.
+    """
+
+    def __init__(
+        self,
+        message: str,
+        partial_assignments: List[MicAssignment],
+        unassigned_actors: List[str],
+    ):
+        super().__init__(message)
+        self.partial_assignments = partial_assignments
+        self.unassigned_actors = unassigned_actors    
 
 
 def _is_feasible_add(candidate: ActorTimeline, group: List[ActorTimeline]) -> bool:
@@ -128,43 +146,74 @@ def auto_assign_mics_scored(
     mic_groups: List[List[ActorTimeline]] = [[a] for a in base]
     shared_groups: set[int] = set()
 
+    unassigned_actors: List[str] = []
+
     for actor_t in remaining:
         best_choice: Optional[Tuple[int, int, int, int]] = None
-        # best_choice = (adjacent_boundaries, shared_pack_count_after, -score, group_index)
 
+        # best_choice =
+        # (adjacent_boundaries, shared_pack_count_after, -score, group_index)
         for gi, group in enumerate(mic_groups):
             if len(group) >= max_sharers:
                 continue
+
             if not _is_feasible_add(actor_t, group):
                 continue
 
             candidate_group = group + [actor_t]
 
-            # Objective 1: adjacency risk (lower is better)
+            # Objective 1: adjacency risk, lower is better
             adj = _group_adjacent_boundaries(candidate_group)
 
-            # Objective 2: minimize number of shared packs
+            # Objective 2: minimize the number of shared packs
             would_be_shared = len(candidate_group) > 1
             shared_after = len(shared_groups)
+
             if would_be_shared and gi not in shared_groups:
                 shared_after += 1
 
-            # Objective 3: maximize score (we use negative for lexicographic min)
+            # Objective 3: maximize the safety score
             s = score_group(candidate_group, weights)
-
             key = (adj, shared_after, -s, gi)
+
             if best_choice is None or key < best_choice:
                 best_choice = key
 
         if best_choice is None:
-            raise ValueError(
-                f"No feasible placement found for {actor_t.actor} (conflicts too strict)."
-            )
+            unassigned_actors.append(actor_t.actor)
+            continue
 
         chosen_gi = best_choice[3]
         mic_groups[chosen_gi].append(actor_t)
+
         if len(mic_groups[chosen_gi]) > 1:
             shared_groups.add(chosen_gi)
+
+    if unassigned_actors:
+        partial_assignments = []
+
+        for i, group in enumerate(mic_groups, start=1):
+            group_sorted = sorted(
+                group,
+                key=lambda t: len(t.indices),
+                reverse=True,
+            )
+
+            partial_assignments.append(
+                MicAssignment(
+                    mic_number=i,
+                    actors=[t.actor for t in group_sorted],
+                )
+            )
+
+        raise PartialMicAssignmentError(
+            (
+                "A complete automatic assignment could not be generated. "
+                "The remaining actors can be resolved manually on the Timeline."
+            ),
+            partial_assignments=partial_assignments,
+            unassigned_actors=unassigned_actors,
+        )
 
     # Stable output: sort each mic group by scene-count for readability
     assignments: List[MicAssignment] = []

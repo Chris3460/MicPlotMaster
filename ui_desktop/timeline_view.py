@@ -32,10 +32,18 @@ class TimelineView(QWidget):
         for that scene and NOT on other mic rows for that scene.
     """
 
-    def __init__(self, project: ProjectData, assignments: list):
+    def __init__(
+        self,
+        project: ProjectData,
+        assignments: list,
+        on_resolution_changed=None,
+    ):
+        
         super().__init__()
         self.project = project
         self.assignments = assignments
+        self.on_resolution_changed = on_resolution_changed
+        self.unassigned_actors: list[str] = []
 
         self.table = QTableWidget()
         layout = QVBoxLayout()
@@ -54,6 +62,35 @@ class TimelineView(QWidget):
 
     def refresh(self):
         self.build_timeline()
+        
+    def set_unassigned_actors(self, actors: list[str]):
+        self.unassigned_actors = list(actors or [])
+        self.build_timeline()
+
+
+    def unresolved_scene_count(self) -> int:
+        count = 0
+
+        timelines = derive_actor_timelines(
+            self.project,
+            include_uncast=True
+        )
+
+        overrides = self._overrides()
+
+        for actor in self.unassigned_actors:
+
+            tl = timelines.get(actor)
+
+            if not tl:
+                continue
+
+            for idx in tl.indices:
+
+                if (actor, idx) not in overrides:
+                    count += 1
+
+        return count
 
     # -----------------------------
     # Scene helper text
@@ -203,16 +240,54 @@ class TimelineView(QWidget):
 
         return (start, end, affected)
 
+    def _first_unassigned_row(self) -> int:
+        return len(self.assignments) + 2
+
+
+    def _is_unassigned_row(self, row: int) -> bool:
+        first = self._first_unassigned_row()
+
+        return (
+            first <= row <
+            first + len(self.unassigned_actors)
+        )
+
+
+    def _actor_for_unassigned_row(
+        self,
+        row: int,
+    ) -> str | None:
+
+        if not self._is_unassigned_row(row):
+            return None
+
+        idx = row - self._first_unassigned_row()
+
+        if idx < 0 or idx >= len(self.unassigned_actors):
+            return None
+
+        return self.unassigned_actors[idx]
+    
     # -----------------------------
     # Context menu
     # -----------------------------
     def _on_context_menu(self, pos: QPoint):
         row = self.table.rowAt(pos.y())
         col = self.table.columnAt(pos.x())
+
         if row < 2 or col < 0:
             return
 
+        if self._is_unassigned_row(row):
+            self._show_unassigned_menu(
+                pos,
+                row,
+                col,
+            )
+            return
+
         mic_num = self._mic_row_to_number(row)
+
         if mic_num is None:
             return
 
@@ -331,6 +406,126 @@ class TimelineView(QWidget):
                     clr_block.triggered.connect(lambda _chk=False, a=actor, scenes=list(b_scenes): self._clear_override(a, scenes))
 
         menu.exec(self.table.viewport().mapToGlobal(pos))
+        
+    def _show_unassigned_menu(
+        self,
+        pos: QPoint,
+        row: int,
+        scene_index: int,
+    ):
+        actor = self._actor_for_unassigned_row(row)
+
+        if not actor:
+            return
+
+        menu = QMenu(self)
+
+        open_mics = self._open_mics_for_scenes(
+            [scene_index],
+            actor,
+        )
+
+        for mic in open_mics:
+
+            action = menu.addAction(
+                f"Assign {actor} to Mic {mic}"
+            )
+
+            action.triggered.connect(
+                lambda _chk=False,
+                a=actor,
+                s=scene_index,
+                m=mic:
+                self._assign_unassigned_actor(
+                    a,
+                    s,
+                    m,
+                )
+            )
+        if not open_mics:
+
+            action = menu.addAction(
+                "(No open microphones)"
+            )
+
+            action.setEnabled(False)
+
+        menu.exec(
+            self.table.viewport().mapToGlobal(pos)
+        )
+        
+    def _assign_unassigned_actor(
+        self,
+        actor: str,
+        scene_index: int,
+        mic_number: int,
+    ):
+
+        ov = self._overrides()
+
+        ov[(actor, scene_index)] = mic_number
+
+        timelines = derive_actor_timelines(
+            self.project,
+            include_uncast=True
+        )
+
+        tl = timelines.get(actor)
+
+        if tl:
+
+            unresolved = []
+
+            for idx in tl.indices:
+                if (actor, idx) not in ov:
+                    unresolved.append(idx)
+
+            #
+            # Actor completely resolved
+            #
+            if not unresolved:
+
+                used_mics = sorted(
+                    {
+                        ov[(actor, idx)]
+                        for idx in tl.indices
+                    }
+                )
+
+                if used_mics:
+
+                    base_mic = used_mics[0]
+
+                    for assignment in self.assignments:
+
+                        if (
+                            int(assignment.mic_number)
+                            == int(base_mic)
+                        ):
+
+                            if actor not in assignment.actors:
+                                assignment.actors.append(actor)
+
+                            break
+
+                #
+                # Remove from unresolved list
+                #
+                self.unassigned_actors = [
+                    a
+                    for a in self.unassigned_actors
+                    if a != actor
+                ]
+
+        self.build_timeline()
+
+        mw = self.window()
+
+        if hasattr(mw, "refresh_all_views"):
+            mw.refresh_all_views()
+
+        if self.on_resolution_changed:
+            self.on_resolution_changed()
 
     def _apply_override(self, actor: str, scenes: list[int], mic_number: int):
         ov = self._overrides()
@@ -345,6 +540,9 @@ class TimelineView(QWidget):
         if hasattr(mw, "refresh_all_views"):
             mw.refresh_all_views()
 
+        if self.on_resolution_changed:
+            self.on_resolution_changed()
+
     def _clear_override(self, actor: str, scenes: list[int]):
         ov = self._overrides()
         for s in scenes:
@@ -358,6 +556,9 @@ class TimelineView(QWidget):
         if hasattr(mw, "refresh_all_views"):
             mw.refresh_all_views()
 
+        if self.on_resolution_changed:
+            self.on_resolution_changed()
+
     # -----------------------------
     # Build Timeline
     # -----------------------------
@@ -366,7 +567,11 @@ class TimelineView(QWidget):
         mics = self.assignments
 
         self.table.clear()
-        self.table.setRowCount(len(mics) + 2)
+        extra_rows = len(self.unassigned_actors)
+
+        self.table.setRowCount(
+            len(mics) + 2 + extra_rows
+        )
         self.table.setColumnCount(len(scenes))
 
         self._per_scene_by_mic = {}
@@ -566,6 +771,44 @@ class TimelineView(QWidget):
 
                 self.table.setItem(row, c, item)
 
+        # ----------------------------------
+        # UNASSIGNED actor rows
+        # ----------------------------------
+
+        base_row = len(mics) + 2
+
+        for actor_index, actor in enumerate(self.unassigned_actors):
+
+            row = base_row + actor_index
+
+            self.table.setVerticalHeaderItem(
+                row,
+                QTableWidgetItem(f"⚠ {actor}")
+            )
+
+            tl = timelines.get(actor)
+
+            if not tl:
+                continue
+
+            for scene_index in range(len(scenes)):
+
+                if (
+                    scene_index in tl.indices
+                    and (actor, scene_index) not in overrides
+                ):
+
+                    item = QTableWidgetItem(actor)
+
+                    item.setBackground(
+                        QBrush(QColor("#F5B7B1"))
+                    )
+
+                    self.table.setItem(
+                        row,
+                        scene_index,
+                        item
+                    )    
         self._finalize_table()
 
     def _finalize_table(self):
