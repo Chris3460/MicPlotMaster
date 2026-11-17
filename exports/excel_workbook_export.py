@@ -471,6 +471,71 @@ def _build_scenes(wb: Workbook, project: ProjectData, assignments: list):
 
     _autosize_columns(ws, min_width=8, max_width=32)
 
+def _build_dcas(wb: Workbook, project: ProjectData, assignments: list):
+    ws = wb.create_sheet("DCA's")
+    scenes, per_scene_by_mic, actor_indices, final_mics, wire_res = _compute_override_context(project, assignments)
+
+    dca_map = getattr(project, "dca_assignments", {}) or {}
+
+    scene_dcas: Dict[int, Dict[str, str]] = {}
+    for si, scene in enumerate(scenes):
+        per_actor = dca_map.get(scene.id, {}) or {}
+        for actor, dca in per_actor.items():
+            if dca and si in set(actor_indices.get(actor, [])):
+                scene_dcas.setdefault(si, {})[actor] = dca
+
+    dca_scene_idx = sorted(scene_dcas.keys())
+
+    headers = ["Wire #", "Cast Member", "Mic Pack"] + [_scene_header(scenes[i]) for i in dca_scene_idx]
+    ws.append(headers)
+
+    ws.row_dimensions[1].height = MIC_PLOT_HEADER_HEIGHT
+    for c in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=c)
+        cell.font = SCENES_FONT
+        cell.alignment = CENTER_WRAP
+        cell.fill = SCENES_HEADER_FILL
+        cell.border = BORDER
+
+    actor_to_mics: Dict[str, Set[int]] = {}
+    for mic_num, per_scene in per_scene_by_mic.items():
+        for _si, aset in per_scene.items():
+            for actor in aset:
+                actor_to_mics.setdefault(actor, set()).add(int(mic_num))
+
+    expanded_rows: list[tuple[int, str, int]] = []
+    for actor, wire in sorted(wire_res.actor_to_wire.items(), key=lambda kv: kv[1]):
+        internal_mics = sorted(actor_to_mics.get(actor, set()))
+        final_packs = sorted({int(final_mics.get(m, m)) for m in internal_mics})
+        if not final_packs:
+            expanded_rows.append((int(wire), actor, 0))
+        else:
+            for pack in final_packs:
+                expanded_rows.append((int(wire), actor, int(pack)))
+    expanded_rows.sort(key=lambda r: (r[0], r[2], r[1].lower()))
+
+    for r, (wire, actor, pack) in enumerate(expanded_rows, start=2):
+        pack_text = "" if pack == 0 else str(pack)
+
+        for c, val, align in [
+            (1, wire, CENTER),
+            (2, _abbreviate_name(actor), LEFT),
+            (3, pack_text, CENTER),
+        ]:
+            cell = ws.cell(row=r, column=c, value=val)
+            cell.font = SCENES_FONT
+            cell.alignment = align
+            cell.fill = SCENES_INFO_FILL
+            cell.border = BORDER
+
+        for c, si in enumerate(dca_scene_idx, start=4):
+            cell = ws.cell(row=r, column=c, value=scene_dcas.get(si, {}).get(actor, ""))
+            cell.font = SCENES_FONT
+            cell.alignment = CENTER
+            cell.fill = SCENES_SCENE_FILL
+            cell.border = BORDER
+
+    _autosize_columns(ws, min_width=8, max_width=32)
 
 # -----------------------------
 # Public entry point
@@ -484,5 +549,6 @@ def export_show_workbook(path: str, project: ProjectData, assignments: list):
     _build_sharing(wb, project, assignments)
     _build_mic_list(wb, project, assignments)
     _build_scenes(wb, project, assignments)
+    _build_dcas(wb, project, assignments)     
 
     wb.save(path)

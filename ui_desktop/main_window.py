@@ -56,12 +56,14 @@ from imports.csv_import import (
     CSVImportError,
 )
 
+from ui_desktop.dca_editor import DCAEditor
+
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Mic Plot Master 2.0.11")
+        self.setWindowTitle("Mic Plot Master 2.0.12")
 
         # -----------------------------
         # Project state
@@ -194,6 +196,9 @@ class MainWindow(QMainWindow):
             on_groups_changed=self.on_manual_groups_changed,
         )
         self.tabs.addTab(self.manual_tab, "Manual Assignment")
+        
+        self.dca_editor = DCAEditor(self.project)
+        self.tabs.addTab(self.dca_editor, "DCA's")
         
         self.help_tab = HelpTab()
         self.tabs.addTab(self.help_tab, "Help")
@@ -398,6 +403,9 @@ class MainWindow(QMainWindow):
             on_groups_changed=self.on_manual_groups_changed,
         )
         self.tabs.addTab(self.manual_tab, "Manual Assignment")
+        
+        self.dca_editor = DCAEditor(self.project)
+        self.tabs.addTab(self.dca_editor, "DCA's")
 
         # -----------------------------
         # Final UI sync

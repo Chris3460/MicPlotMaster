@@ -73,6 +73,10 @@ class ProjectData:
     character_sort_mode: str = "Alphabetical (A-Z)"
     all_character_custom_order: List[str] = field(default_factory=list)
     actor_sort_mode: str = "Alphabetical (A-Z)"
+    
+    # ---------- DCAs (per scene) ----------
+    dca_names: Dict[int, List[str]] = field(default_factory=dict)
+    dca_assignments: Dict[int, Dict[str, str]] = field(default_factory=dict)
 
     # -----------------------------
     # Serialization
@@ -119,6 +123,11 @@ class ProjectData:
             "character_sort_mode": self.character_sort_mode,
             "all_character_custom_order": self.all_character_custom_order,
             "actor_sort_mode": self.actor_sort_mode,
+
+            "dca_names": {str(k): list(v) for k, v in self.dca_names.items()},
+            "dca_assignments": {
+                str(k): dict(v) for k, v in self.dca_assignments.items()
+            },
         }
 
     @classmethod
@@ -183,6 +192,19 @@ class ProjectData:
             "actor_sort_mode",
             "Alphabetical (A-Z)"
         )
+
+        project.dca_names = {}
+        for k, v in (data.get("dca_names", {}) or {}).items():
+            try:
+                project.dca_names[int(k)] = list(v)
+            except Exception:
+                continue
+        project.dca_assignments = {}
+        for k, v in (data.get("dca_assignments", {}) or {}).items():
+            try:
+                project.dca_assignments[int(k)] = dict(v)
+            except Exception:
+                continue
 
         return project
 
